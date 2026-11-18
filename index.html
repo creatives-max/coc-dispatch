@@ -209,7 +209,7 @@ table.mat tfoot td{border-bottom:0;font-weight:700;color:#13507F;font-size:7.6pt
       <h2><i>3</i> Machines</h2>
       <div id="rows"></div>
       <button class="btn ghost small" id="addrow" type="button" style="margin-bottom:16px">+ Add machine</button>
-      <div class="hint">Up to 8 machines fit on one page. The serial number is the only reference printed and encoded in the QR.</div>
+      <div class="hint">Up to 8 machines fit on one page. The serial number and Kiosk ID are printed; only the serial number is encoded in the QR.</div>
 
       <div class="card scan">
         <div class="eyebrow">What a QR scan will show</div>
@@ -2562,7 +2562,7 @@ var qrcode = function() {
     try{ var k='coc_ack_'+d; n = (parseInt(localStorage.getItem(k)||'0',10)||0)+1; localStorage.setItem(k,String(n)); }catch(e){}
     return 'COC-POD-'+d+'-'+String(n).padStart(3,'0');
   }
-  function newRow(){ return {model:'Health ATM / Health Kiosk', serial:'', qty:'1', rem:''}; }
+  function newRow(){ return {model:'Health ATM / Health Kiosk', serial:'', kiosk:'', qty:'1', rem:''}; }
 
   /* 53-bit string hash: stand-in for a server-side signature */
   function hash(str){
@@ -2596,9 +2596,9 @@ var qrcode = function() {
     var rows = g.rows.slice(0,MAX_ROWS), blanks = Math.max(0, 3-rows.length), tr='', qty=0;
     rows.forEach(function(r,i){
       var q=parseInt(r.qty,10); if(!isNaN(q)) qty+=q;
-      tr += '<tr><td class="sr">'+(i+1)+'</td><td>'+val(r.model)+'</td><td class="ser">'+val(r.serial.toUpperCase())+'</td><td class="q">'+val(r.qty)+'</td><td>'+val(r.rem)+'</td></tr>';
+      tr += '<tr><td class="sr">'+(i+1)+'</td><td>'+val(r.model)+'</td><td class="ser">'+val(r.serial.toUpperCase())+'</td><td class="ser">'+val(r.kiosk)+'</td><td class="q">'+val(r.qty)+'</td><td>'+val(r.rem)+'</td></tr>';
     });
-    for(var b=0;b<blanks;b++){ tr += '<tr><td class="sr">'+(rows.length+b+1)+'</td><td></td><td></td><td class="q"></td><td></td></tr>'; }
+    for(var b=0;b<blanks;b++){ tr += '<tr><td class="sr">'+(rows.length+b+1)+'</td><td></td><td></td><td></td><td class="q"></td><td></td></tr>'; }
     var qrMsg = v.serials.length ? (v.serials.length+' machine'+(v.serials.length>1?'s':'')) : 'No serial yet';
     return ''+
     '<div class="s-head">'+
@@ -2623,8 +2623,8 @@ var qrcode = function() {
           '<div class="f full"><label>Driver name &amp; mobile</label><div>'+val(g.drv)+'</div></div>'+
         '</div></div>'+
       '<div><div class="sec-t"><i>3</i> Material received</div>'+
-        '<table class="mat"><thead><tr><th class="sr">Sr</th><th>Description / model</th><th>Machine serial no.</th><th class="q">Qty</th><th>Condition / remarks</th></tr></thead><tbody>'+tr+'</tbody>'+
-        '<tfoot><tr><td></td><td></td><td style="text-align:right">Total units</td><td class="q">'+(qty||'')+'</td><td></td></tr></tfoot></table></div>'+
+        '<table class="mat"><thead><tr><th class="sr">Sr</th><th>Description / model</th><th>Machine serial no.</th><th>Kiosk ID</th><th class="q">Qty</th><th>Condition / remarks</th></tr></thead><tbody>'+tr+'</tbody>'+
+        '<tfoot><tr><td></td><td></td><td></td><td style="text-align:right">Total units</td><td class="q">'+(qty||'')+'</td><td></td></tr></tfoot></table></div>'+
       '<div><div class="sec-t"><i>4</i> Receipt confirmation</div>'+
         '<div class="conf">We acknowledge physical receipt of the machine(s) listed above, identified by serial number, at the delivery site on the date of delivery written below. Quantity and visible external condition have been checked as indicated. This acknowledgement confirms receipt only; it does not constitute installation completion, functional acceptance, or approval of commercial terms.</div>'+
         '<div class="chk"><span><i></i> Received in apparent good condition</span><span><i></i> Received with exceptions noted below</span></div>'+
@@ -2667,8 +2667,9 @@ var qrcode = function() {
         '<div class="grid2">'+
         '<label class="field full"><span>Description / model</span><input data-k="model" data-i="'+i+'" value="'+esc(r.model)+'"></label>'+
         '<label class="field"><span>Machine serial no.</span><input data-k="serial" data-i="'+i+'" value="'+esc(r.serial)+'" placeholder="Scan or type" style="text-transform:uppercase;font-family:ui-monospace,Menlo,Consolas,monospace"></label>'+
+        '<label class="field"><span>Kiosk ID</span><input data-k="kiosk" data-i="'+i+'" value="'+esc(r.kiosk)+'" placeholder="Scan or type" style="font-family:ui-monospace,Menlo,Consolas,monospace"></label>'+
         '<label class="field"><span>Qty</span><input data-k="qty" data-i="'+i+'" value="'+esc(r.qty)+'" inputmode="numeric"></label>'+
-        '<label class="field full"><span>Remarks (optional)</span><input data-k="rem" data-i="'+i+'" value="'+esc(r.rem)+'" placeholder="e.g. packed in crate, 1 of 2"></label>'+
+        '<label class="field"><span>Remarks (optional)</span><input data-k="rem" data-i="'+i+'" value="'+esc(r.rem)+'" placeholder="e.g. packed in crate, 1 of 2"></label>'+
         '</div>';
       box.appendChild(d);
     });
@@ -2706,7 +2707,7 @@ var qrcode = function() {
     return { slipId:state.slipId, _v:Date.now().toString(36)+Math.random().toString(36).slice(2,6), savedAt:stamp(),
       user:$('userchip').textContent.trim(), ack:g.ack.trim(), date:g.date, site:g.site, contact:g.contact, phone:g.phone,
       from:g.from, tr:g.tr, veh:g.veh, lr:g.lr, drv:g.drv, code:v.code,
-      rows:g.rows.slice(0,MAX_ROWS).map(function(r){ return { model:r.model, serial:r.serial.trim().toUpperCase(), qty:r.qty, rem:r.rem }; }) };
+      rows:g.rows.slice(0,MAX_ROWS).map(function(r){ return { model:r.model, serial:r.serial.trim().toUpperCase(), kiosk:String(r.kiosk||'').trim(), qty:r.qty, rem:r.rem }; }) };
   }
   function call(method, body){
     var url=SHEET_URL, opt={ method:method, credentials:'omit', redirect:'follow' }, ctrl=null, timer;
